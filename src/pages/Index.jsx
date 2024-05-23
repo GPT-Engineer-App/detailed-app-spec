@@ -30,6 +30,19 @@ const addNote = async (note) => {
   });
 };
 
+// Update a note in Supabase
+const updateNote = async (id, note) => {
+  await fetch(`${SUPABASE_URL}/rest/v1/notes?id=eq.${id}`, {
+    method: "PATCH",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(note),
+  });
+};
+
 // Delete a note from Supabase
 const deleteNote = async (id) => {
   await fetch(`${SUPABASE_URL}/rest/v1/notes?id=eq.${id}`, {
@@ -47,6 +60,7 @@ const Index = () => {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
   const [filter, setFilter] = useState("");
+  const [editingNote, setEditingNote] = useState(null);
 
   useEffect(() => {
     const getNotes = async () => {
@@ -57,13 +71,26 @@ const Index = () => {
   }, []);
 
   const handleAddNote = async () => {
-    const newNote = { title, content, category };
-    await addNote(newNote);
+    if (editingNote) {
+      const updatedNote = { title, content, category };
+      await updateNote(editingNote.id, updatedNote);
+      setEditingNote(null);
+    } else {
+      const newNote = { title, content, category };
+      await addNote(newNote);
+    }
     const notes = await fetchNotes();
     setNotes(notes);
     setTitle("");
     setContent("");
     setCategory("");
+  };
+
+  const handleEditNote = (note) => {
+    setTitle(note.title);
+    setContent(note.content);
+    setCategory(note.category);
+    setEditingNote(note);
   };
 
   const handleDeleteNote = async (id) => {
@@ -98,7 +125,7 @@ const Index = () => {
             mb={2}
           />
           <Button onClick={handleAddNote} colorScheme="teal" width="100%">
-            Add Note
+            {editingNote ? "Update Note" : "Add Note"}
           </Button>
         </Box>
         <Box width="100%">
@@ -117,9 +144,14 @@ const Index = () => {
             <Box key={note.id} p={4} shadow="md" borderWidth="1px" mb={4}>
               <HStack justifyContent="space-between">
                 <Text fontWeight="bold">{note.title}</Text>
-                <Button size="sm" colorScheme="red" onClick={() => handleDeleteNote(note.id)}>
-                  Delete
-                </Button>
+                <HStack>
+                  <Button size="sm" colorScheme="blue" onClick={() => handleEditNote(note)}>
+                    Edit
+                  </Button>
+                  <Button size="sm" colorScheme="red" onClick={() => handleDeleteNote(note.id)}>
+                    Delete
+                  </Button>
+                </HStack>
               </HStack>
               <Text mt={2}>{note.content}</Text>
               <Text mt={2} fontSize="sm" color="gray.500">{note.category}</Text>
